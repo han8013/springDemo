@@ -1,0 +1,223 @@
+<html>
+<head>
+<script type="text/javascript" src="js/echarts.min.js"></script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+	integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+	crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+	integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+	crossorigin="anonymous">
+<!-- Latest compiled and minified JavaScript -->
+<script
+	src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+	integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+	crossorigin="anonymous"></script>
+</head>
+
+<body style="margin-left:30px;">
+	<h1>Anomaly Detection as a Service 2222!!!</h1>
+	<div>
+		<div class="form-inline">
+			<div class="form-group">
+				<label for="poolName">Pool Name</label> <input type="text"
+					class="form-control input-sm" id="poolName" placeholder="r1xoneor" value="r1xoneor">
+			</div>
+			<label for="profile">Profile</label>
+			<select class="form-control input-sm" id="profile">
+				<option value="perfmon">perfmon</option>
+				<option value="ServiceClient">ServiceClient</option>
+			</select>
+			<label for="metric">Metric</label>
+			<select class="form-control input-sm" id="metric">
+				<option value="errorCount">errorCount</option>
+				<option value="CallTime99Percentile/service.pool.colo">CallTime99Percentile/service.pool.colo</option>
+			</select>
+		</div>
+		<div class="form-inline">
+			<div class="form-group">
+				<label for="maxAnoms">maxAnoms</label>
+				<input type="text" class="form-control input-sm" id="maxAnoms" placeholder="maxAnoms" value="0.49">
+			</div>
+			<div class="form-group">
+				<label for="numObsPerPeriod">numObsPerPeriod</label>
+				<input type="text" class="form-control input-sm" id="numObsPerPeriod" placeholder="numObsPerPeriod" value="30">
+			</div>
+			<div class="form-group">
+				<label for="threshold">threshold</label>
+				<input type="text" class="form-control input-sm" id="threshold" placeholder="threshold" value="1.05">
+			</div>
+			<div class="form-group">
+				<label for="alpha">alpha</label>
+				<input type="text" class="form-control input-sm" id="alpha" placeholder="alpha" value="0.05">
+			</div>
+			<!-- 
+			<div class="form-group">
+				<label class="sr-only" for="startTime">Start Time</label> 
+				<input type="text" class="form-control" id="startTime" placeholder="">
+			</div>
+			<div class="form-group">
+				<label class="sr-only" for="endTime">End Time</label> 
+				<input type="text" class="form-control" id="endTime" placeholder="">
+			</div>
+			 -->
+			<button type="button" class="btn btn-default" id="submitBtn">submit</button>
+		</div>
+	</div>
+	<div id="charts">
+		<div id='phx' style='width: 600px; height: 400px;'></div>
+		<div id='slc' style='width: 600px; height: 400px;'></div>
+		<div id='lvs' style='width: 600px; height: 400px;'></div>
+	</div>
+	<hr>
+	<h3>how to use?</h3>
+	<pre>
+    http://slcsrets-1300112.stratus.slc.ebay.com:7070/detect?poolName=r1xonyx
+	
+    @CrossOrigin(origins = "*")
+    @RequestMapping("/detect")
+    public Rsps greeting(@RequestParam(value="poolName", defaultValue="r1xonyx") String poolName
+    					,@RequestParam(value="profile", defaultValue="perfmon") String profile
+    					,@RequestParam(value="metric", defaultValue="errorCount") String metric
+    					,@RequestParam(value="startTime", defaultValue="0") long startTime
+    					,@RequestParam(value="endTime", defaultValue="0") long endTime
+    					,@RequestParam(value="maxAnoms", defaultValue="0.49") double maxAnoms
+    					,@RequestParam(value="numObsPerPeriod", defaultValue="30") int numObsPerPeriod
+    					,@RequestParam(value="threshold", defaultValue="1.05") double threshold
+    					,@RequestParam(value="alpha", defaultValue="0.05") double alpha) {}
+    </pre>
+	<script type="text/javascript">
+		function renderChart(data) {
+			let anomalyRange = [];
+			if (data.anomalysIndex
+					&& data.anomalysIndex.length > 0) {
+				console.log("in has ....");
+				let start = data.anomalysIndex[0];
+				let prev = start;
+				let cur = 0;
+				for (let i = 1; i < data.anomalysIndex.length; i++) {
+					cur = data.anomalysIndex[i];
+					if (cur == prev + 1) {
+						prev = cur;
+					} else {
+						if (start == prev) {
+							start = start - 1;
+							prev = prev + 1;
+						}
+						anomalyRange.push([ {
+							name : '-',
+							xAxis : start
+						}, {
+							xAxis : prev
+						} ]);
+
+						start = cur;
+						prev = cur;
+					}
+				}
+				if (start == prev) {
+					start = start - 1;
+					prev = prev + 1;
+				}
+				anomalyRange.push([ {
+					name : '',
+					xAxis : start
+				}, {
+					xAxis : prev
+				} ]);
+			} else {
+				anomalyRange = "";
+			}
+			console.log(anomalyRange);
+			// 鍩轰簬鍑嗗濂界殑dom锛屽垵濮嬪寲echarts瀹炰緥
+			var myChart = echarts.init(document.getElementById(data.name + "_chart"));
+			option = {
+				title : {
+					text : data.name,
+					subtext : 'test'
+				},
+				tooltip : {
+					trigger : 'axis',
+					axisPointer : {
+						type : 'cross'
+					}
+				},
+				toolbox : {
+					show : true,
+					feature : {
+						saveAsImage : {}
+					}
+				},
+				xAxis : {
+					type : 'category',
+					boundaryGap : false,
+					data : data.timestamps,
+					axisLabel : {
+						formatter : function(value, index) {
+							// 鏍煎紡鍖栨垚鏈�/鏃ワ紝鍙湪绗竴涓埢搴︽樉绀哄勾浠�
+							var date = new Date(value * 1000);
+							console.log(value + "|" + date);
+							var minutes = date.getMinutes();
+							if (minutes < 10) {
+								minutes = "0" + minutes;
+							}
+							var texts = [ date.getHours(), minutes ];
+							return texts.join(':');
+						}
+					}
+				},
+				yAxis : {
+					type : 'value',
+					axisLabel : {
+						formatter : '{value}'
+					},
+					axisPointer : {
+						snap : true
+					}
+				},
+				series : [ {
+					name : 'count',
+					type : 'line',
+					smooth : true,
+					data : data.series,
+					markArea : {
+						data : anomalyRange
+					}
+				} ]
+			};
+			console.log(JSON.stringify(option));
+			// 浣跨敤鍒氭寚瀹氱殑閰嶇疆椤瑰拰鏁版嵁鏄剧ず鍥捐〃銆�
+			myChart.setOption(option);
+		}
+		
+		function refresh() {
+			var poolName = $("#poolName").val();
+			var profile = $("#profile").val();
+			var metric = $("#metric").val();
+			var maxAnoms = $("#maxAnoms").val();
+			var numObsPerPeriod = $("#numObsPerPeriod").val();
+			var threshold = $("#threshold").val();
+			var alpha = $("#alpha").val();
+
+			var queryStr = "poolName=" + poolName + "&profile=" + profile + "&metric=" + metric + "&maxAnoms=" + maxAnoms + "&numObsPerPeriod=" + numObsPerPeriod + "&threshold=" + threshold + "&alpha=" + alpha;
+			$.get("/demo?" + queryStr, function(rsps) {
+				if (rsps.datas) {
+					$("#charts").html("");
+					rsps.datas.forEach(function(ele){
+						$("#charts").append("<div id='" + ele.name + "_chart' style='width: 600px; height: 400px;'></div>");
+						renderChart(ele);
+					});
+				}
+			});
+		}
+		
+		$("#submitBtn").click(function(){
+			refresh();
+		});
+	</script>
+</body>
+</html>

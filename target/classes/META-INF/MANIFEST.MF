@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Built-By: xinghan
+Build-Jdk: 10.0.1
+Implementation-Title: springDemo
+Implementation-Version: 0.0.1-SNAPSHOT
+Implementation-Vendor-Id: com.xingh3
+Implementation-URL: https://projects.spring.io/spring-boot/#/spring-bo
+ ot-starter-parent/springDemo
+Created-By: Maven Integration for Eclipse
+
